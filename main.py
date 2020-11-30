@@ -21,6 +21,7 @@ class Objective(object):
 
     def __init__(self, goal):
         self.goal = goal
+        self.inProgress = False
         self.completed = False
 
     def checkOff(self):
@@ -55,6 +56,17 @@ class Rover(object):
         latitude += self.speed
         longitude += self.speed
 
+    def spendCharge(self):
+        if(self.percentCharged > 0):
+            self.percentCharged -= 1
+
+    def wear(self):
+        if(self.percentWorn < 100):
+            self.percentWorn += 1
+
+    def damage(self, obstacle):
+        pass
+
     def charge(self):
         self.percentCharged += self.chargingRate
 
@@ -63,6 +75,14 @@ class Rover(object):
 
     def upgradeChargingEfficiency(self):
         self.chargingRate *= 1.5
+
+class Obstacle(object):
+    def __init__(self, damage):
+        self.damage = damage
+
+class Crater(Obstacle):
+    def draw(self, app, canvas):
+        pass
 
 def appStarted(app):
     # define fonts
@@ -75,6 +95,12 @@ def appStarted(app):
     for i in range(100):
         app.stars.append(Star(app))
 
+    resetAll(app)
+
+def resetAll(app):
+    # counter that increments every 10 ms
+    app.time = 0
+
     # initialize objectives
     app.objectives = []
     app.objectives.append(Objective("deploy from lander"))
@@ -86,7 +112,13 @@ def appStarted(app):
     app.rover = Rover(0, 0)
 
 def timerFired(app):
-    pass
+    app.time += 1
+
+    # increment rover stats
+    if(app.time%100 == 0):
+        app.rover.spendCharge()
+    if(app.time%500 == 0):
+        app.rover.wear()
 
 # reset star locations if window size changes
 def sizeChanged(app):
@@ -109,6 +141,8 @@ def keyPressed(app, event):
     # other controls
     elif(event.key == "Space"):
         pass
+    elif(event.key == 'r'):
+        resetAll(app)
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
