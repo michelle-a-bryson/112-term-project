@@ -1,88 +1,7 @@
 from cmu_112_graphics import *
 import math
 import random
-
-# draws stars in the camera feed
-class Star(object):
-
-    def __init__(self, app):
-        x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
-        self.x = random.randint(x1, x2)
-        self.y = random.randint(y1, y2//3)
-        self.r = random.random()*1.8
-        self.color = "white"
-
-    def draw(self, canvas):
-        canvas.create_oval(self.x + self.r, self.y + self.r, 
-                            self.x - self.r, self.y - self.r, fill = self.color)
-
-# keeps track of mission objectives
-class Objective(object):
-
-    def __init__(self, goal):
-        self.goal = goal
-        self.inProgress = False
-        self.completed = False
-
-    def checkOff(self):
-        self.completed = True
-
-    def draw(self, app, canvas, x, y):
-        length = app.width/80
-        canvas.create_rectangle(x, y, x + length, y + length, width = 2)
-        canvas.create_text(x + length*2, y, text = self.goal, 
-                            font = app.paragraphFont, fill = "black", anchor = "nw")
-        if(self.completed):
-            # draw checkmark
-            pass
-
-class Rover(object):
-
-    def __init__(self, latitude, longitude):
-        self.location = (latitude, longitude)
-        self.level = 0
-        self.speed = 2              # meters per second
-        self.percentCharged = 100
-        self.temperature = 25       # degrees Celsius
-        self.percentWorn = 0
-        self.chargingRate = 5
-
-    def draw(self, app, canvas):
-        if(self.level == 0):
-            # draw basic rover with no upgrade
-            pass
-
-    def move(self):
-        latitude += self.speed
-        longitude += self.speed
-
-    def spendCharge(self):
-        if(self.percentCharged > 0):
-            self.percentCharged -= 1
-
-    def wear(self):
-        if(self.percentWorn < 100):
-            self.percentWorn += 1
-
-    def damage(self, obstacle):
-        pass
-
-    def charge(self):
-        self.percentCharged += self.chargingRate
-
-    def upgradeSpeed(self):
-        self.speed += 1
-
-    def upgradeChargingEfficiency(self):
-        self.chargingRate *= 1.5
-
-class Obstacle(object):
-    def __init__(self, damage):
-        self.damage = damage
-
-class Crater(Obstacle):
-    def draw(self, app, canvas):
-        pass
+from classes import *
 
 def appStarted(app):
     # define fonts
@@ -104,12 +23,22 @@ def resetAll(app):
     # initialize objectives
     app.objectives = []
     app.objectives.append(Objective("deploy from lander"))
-    app.objectives.append(Objective("travel to mission site"))
+    app.objectives.append(PictureObjectives())
+    app.objectives.append(PictureObjectives())
+
+    app.objectives.append(PictureObjectives())
+
     app.objectives.append(Objective("take pictures (3 of 10)"))
     app.objectives.append(Objective("collect samples (1 of 5)"))
 
     # create rover
     app.rover = Rover(0, 0)
+
+    # create obstacles
+    app.obstacles = []
+    app.obstacles.append(Crater(app, 10))
+    app.obstacles.append(Crater(app, 10))
+    app.obstacles.append(Crater(app, 10))
 
 def timerFired(app):
     app.time += 1
@@ -119,6 +48,7 @@ def timerFired(app):
         app.rover.spendCharge()
     if(app.time%500 == 0):
         app.rover.wear()
+
 
 # reset star locations if window size changes
 def sizeChanged(app):
@@ -130,19 +60,49 @@ def mousePressed(app, event):
 
 def keyPressed(app, event):
     # rover mobility keys
+    # obstacles become larger as they come closer
     if(event.key == "Up" or event.key == "w"):
-        pass
+        moveBackground(app, (0, -1), -0.1)
     elif(event.key == "Down" or event.key == "s"):
-        pass
+        moveBackground(app, (0, 1), 0.1)
     elif(event.key == "Left" or event.key == "a"):
-        pass
+        moveBackground(app, (-1, 0), 0)
     elif(event.key == "Right" or event.key == "d"):
-        pass
+        moveBackground(app, (1, 0), 0)
     # other controls
     elif(event.key == "Space"):
         pass
     elif(event.key == 'r'):
         resetAll(app)
+
+def moveBackground(app, dir, dSize):
+    dx, dy = dir
+    x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
+
+    for obstacle in app.obstacles:
+
+        obstacle.x += dx
+        obstacle.y += dy
+        obstacle.size += dSize
+        # for perspective, move right or left
+        if((dy == 1 and obstacle.x > app.width/2) or
+            (dy == -1 and obstacle.x < app.width/2)):
+            obstacle.x += 1
+        elif(dy != 0):
+            obstacle.x -= 1
+
+        if((obstacle.x < x1 - obstacle.size*1.5) or
+            (obstacle.x > x2 + obstacle.size*1.5) or
+            (obstacle.y < y1 - obstacle.size) or
+            (obstacle.y > y2 + obstacle.size)):
+            app.obstacles.pop()
+            # add new obstacle
+            app.obstacles.append(Crater(app, 10))
+            app.obstacles[-1].y = y2//3 + app.obstacles[-1].size
+            app.obstacles[-1].size /= 3
+        
+
+        
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
@@ -154,6 +114,10 @@ def drawCameraFeedSection(app, canvas):
 
     # draw mars
     canvas.create_rectangle(x1, y1 + y2//3, x2, y2, fill = "tomato4")
+
+    # draw obstacles
+    for obstacle in app.obstacles:
+        obstacle.draw(app, canvas)
 
     # draw rover
     app.rover.draw(app, canvas)
@@ -194,7 +158,8 @@ def drawRoverInfoSection(app, canvas):
                         font = app.paragraphFont, anchor = "nw")
 
 def drawRoverControlSection(app, canvas):
-    pass
+    x1, y1, x2, y2 = app.width//5, app.height*3//4, app.width*4//5, app.height
+    canvas.create_rectangle(x1, y1, x2, y2, fill = "gray")
 
 def redrawAll(app, canvas):
     #draw background
@@ -202,5 +167,6 @@ def redrawAll(app, canvas):
     drawCameraFeedSection(app, canvas)
     drawMissionSection(app, canvas)
     drawRoverInfoSection(app, canvas)
+    drawRoverControlSection(app, canvas)
 
 runApp(width=1100, height=600)
