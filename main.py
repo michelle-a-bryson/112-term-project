@@ -39,6 +39,8 @@ def resetAll(app):
     app.obstacles.append(Crater(app, 10))
     app.obstacles.append(Crater(app, 10))
     app.obstacles.append(Crater(app, 10))
+    app.obstacles.append(Crater(app, 10))
+    app.obstacles.append(Crater(app, 10))
 
 def timerFired(app):
     app.time += 1
@@ -100,8 +102,6 @@ def moveBackground(app, dir, dSize):
             app.obstacles.append(Crater(app, 10))
             app.obstacles[-1].y = y2//3 + app.obstacles[-1].size
             app.obstacles[-1].size /= 3
-        
-
         
 
 def drawCameraFeedSection(app, canvas):
