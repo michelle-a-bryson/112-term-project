@@ -123,7 +123,19 @@ def moveBackground(app, dir, dSize):
 def positionOfSun(app):
     # physics with the orbits and rotations of mars and the sun
     # to determine where the sun is in the sky
+
     pass
+
+def earthToMarsTime(app):
+    timeScale = 100     # time passed in the game relative to real life
+    scaledTime = app.time * timeScale
+    seconds = scaledTime//1000
+    minutes = seconds//60
+    minute = seconds%60
+    hours = minutes//60
+    hour = int(hours%24.6)
+    sol = int(hours//24.6)
+    return sol, hour, minute
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
@@ -144,6 +156,8 @@ def drawCameraFeedSection(app, canvas):
     # draw stars
     for star in app.stars:
         star.draw(canvas)
+
+    # draw demos and phobos
 
 def drawMissionSection(app, canvas):
     x1, y1, x2, y2 = 0, 0, app.width//5, app.height
@@ -188,9 +202,29 @@ def drawRoverInfoSection(app, canvas):
                         text = f"Wear and Tear: {app.rover.percentWorn}%", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
 
+    # draw time
+    s, h, m = earthToMarsTime(app)
+    canvas.create_text(x1 + (x2-x1)//8, y2*7/8, 
+                        text = f"Sol {s}, {h}:{m}", fill = 'black', 
+                        font = app.paragraphFont, anchor = "nw")
+
 def drawRoverControlSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, app.height*3//4, app.width*4//5, app.height
     canvas.create_rectangle(x1, y1, x2, y2, fill = "gray")
+
+# from 112 course notes
+def readFile(path):
+    with open(path, "rt") as f:
+        return f.read()
+
+def writeFile(path, contents):
+    with open(path, "wt") as f:
+        f.write(contents)
+
+# contentsToWrite = "This is a test!\nIt is only a test!"
+# writeFile("foo.txt", contentsToWrite)
+
+# contentsRead = readFile("foo.txt")
 
 def redrawAll(app, canvas):
     #draw background
