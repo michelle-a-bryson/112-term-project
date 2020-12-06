@@ -88,29 +88,31 @@ class SampleObjectives(Objective):
 class Rover(object):
 
     def __init__(self, latitude, longitude):
-        self.location = (latitude, longitude)
+        self.latitude = latitude
+        self.longitude = longitude
         self.level = 0
         self.speed = 2              # meters per second
         self.percentCharged = 100
         self.temperature = 25       # degrees Celsius
         self.percentWorn = 0
         self.chargingRate = 5
+        self.lx = self.rx = self.ty = self.by = 0
 
     def draw(self, app, canvas):
         x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
-
+        
         y2 *= 1.15
 
         if(self.level == 0):
             # draw basic rover with no upgrades
-            bLeftX = tLeftX = x1 + x2/4
+            self.lx = bLeftX = tLeftX = x1 + x2/4
             bRightX = tRightX = x1 + x2*2/5
-            bLeftY = bRightY = y2 * 9/10
+            self.by = bLeftY = bRightY = y2 * 9/10
             tRightY = tLeftY = y2*7.5/10
 
-            fRightX = lRightX = lLeftX = fLeftX = bRightX + x2/20
+            self.rx = fRightX = lRightX = lLeftX = fLeftX = bRightX + x2/20
             lRightY = lLeftY = tRightY - y2/50
-            fRightY = fLeftY = tRightY - y2/8
+            self.ty = fRightY = fLeftY = tRightY - y2/8
 
             marginX = x2/50
             marginY = y2/50
@@ -205,9 +207,26 @@ class Obstacle(object):
         self.y = random.randint(y2//3 + self.size, y2 - self.size)
 
 class Crater(Obstacle):
+
+    def __init__(self, app, damage):
+        x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
+        self.damage = damage
+        self.size = random.randint(20, 50)
+        self.x = random.randint(x1 + int(self.size*1/5), x2 - int(self.size*1.5))
+        self.y = random.randint(y2//3 + self.size, y2 - self.size)
+        self.xr = self.size * 1.5
+        self.yr = self.size
+        divisor = random.randint(5, 10)
+        self.depth = self.size/divisor
+
     def draw(self, app, canvas):
-        xr = self.size * 1.5
-        yr = self.size
+        xr = self.xr
+        yr = self.yr
+        depth = self.depth
+        
         canvas.create_oval(self.x - xr, self.y - yr, 
                             self.x + xr, self.y + yr,
+                            fill = "tomato3", width = 0)
+        canvas.create_oval(self.x - xr + depth, self.y - yr + depth, 
+                            self.x + xr, self.y + yr + depth,
                             fill = "firebrick4", width = 0)

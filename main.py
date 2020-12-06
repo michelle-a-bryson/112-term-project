@@ -20,6 +20,10 @@ def resetAll(app):
     # counter that increments every 10 ms
     app.time = 0
 
+    # dawn, midday, dusk, night
+    # 0,    1,      2,    3
+    app.timeOfDay = 0
+
     # initialize objectives
     app.objectives = []
     app.objectives.append(Objective("deploy from lander"))
@@ -64,15 +68,28 @@ def keyPressed(app, event):
     # rover mobility keys
     # obstacles become larger as they come closer
     if(event.key == "Up" or event.key == "w"):
-        moveBackground(app, (0, -1), -0.1)
-    elif(event.key == "Down" or event.key == "s"):
         moveBackground(app, (0, 1), 0.1)
+        app.rover.latitude += 0.5
+    elif(event.key == "Down" or event.key == "s"):
+        moveBackground(app, (0, -1), -0.1)
+        app.rover.latitude -= 0.5
     elif(event.key == "Left" or event.key == "a"):
-        moveBackground(app, (-1, 0), 0)
-    elif(event.key == "Right" or event.key == "d"):
         moveBackground(app, (1, 0), 0)
+        app.rover.longitude -= 0.5
+    elif(event.key == "Right" or event.key == "d"):
+        moveBackground(app, (-1, 0), 0)
+        app.rover.longitude += 0.5
+
+    # check for collisions
+    for obstacle in app.obstacles:
+        if((app.rover.lx > obstacle.x - obstacle.xr) or
+            (app.rover.rx < obstacle.x + obstacle.xr) or
+            (app.rover.ty < obstacle.y - obstacle.yr) or
+            (app.rover.by > obstacle.y + obstacle.yr)):
+            app.rover.percentWorn += 10
+
     # other controls
-    elif(event.key == "Space"):
+    if(event.key == "Space"):
         pass
     elif(event.key == 'r'):
         resetAll(app)
@@ -102,15 +119,14 @@ def moveBackground(app, dir, dSize):
             app.obstacles.append(Crater(app, 10))
             app.obstacles[-1].y = y2//3 + app.obstacles[-1].size
             app.obstacles[-1].size /= 3
-        
+
+def positionOfSun(app):
+    # physics with the orbits and rotations of mars and the sun
+    # to determine where the sun is in the sky
+    pass
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
-    canvas.create_rectangle(x1, y1, x2, y2, fill = "black")
-
-    # draw stars
-    for star in app.stars:
-        star.draw(canvas)
 
     # draw mars
     canvas.create_rectangle(x1, y1 + y2//3, x2, y2, fill = "tomato4")
@@ -122,12 +138,27 @@ def drawCameraFeedSection(app, canvas):
     # draw rover
     app.rover.draw(app, canvas)
 
+    # draw sky
+    canvas.create_rectangle(x1, y1, x2, y2//3, fill = "black")
+
+    # draw stars
+    for star in app.stars:
+        star.draw(canvas)
+
 def drawMissionSection(app, canvas):
     x1, y1, x2, y2 = 0, 0, app.width//5, app.height
     canvas.create_rectangle(x1, y1, x2, y2, fill = "slate gray")
 
     # draw map
-    canvas.create_rectangle(x2//8, y2//20, x2*7//8, y2*3//10, fill = "black")
+    mx1, my1, mx2, my2 = x2//8, y2//20, x2*7//8, y2*3//10
+    canvas.create_rectangle(mx1, my1, mx2, my2, fill = "tomato4")
+    # rover location
+    r = (mx2 - mx1)/20
+    la = app.rover.latitude
+    lo = app.rover.longitude
+    canvas.create_oval(mx1 + lo + (mx2-mx1)/2 - r, my1 - la + (mx2-mx1)/2 - r, 
+                        mx1 + lo + (mx2-mx1)/2 + r, my1 - la + (mx2-mx1)/2 + r, 
+                        fill = "DeepSkyBlue4", width = 0)
 
     # draw objectives
     canvas.create_text(x2//2, y2//3, text = "Objectives", fill = 'black', font = app.headerFont)
