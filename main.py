@@ -24,6 +24,13 @@ def resetAll(app):
     # 0,    1,      2,    3
     app.timeOfDay = 0
 
+    latitude = random.randint(-100, 100)
+    longitude = random.randint(-100, 100)
+    app.destination = (latitude, longitude)
+
+    # create rover
+    app.rover = Rover(0, 0)
+
     # initialize objectives
     app.objectives = []
     app.objectives.append(Objective("deploy from lander"))
@@ -34,9 +41,8 @@ def resetAll(app):
 
     app.objectives.append(Objective("take pictures (3 of 10)"))
     app.objectives.append(Objective("collect samples (1 of 5)"))
-
-    # create rover
-    app.rover = Rover(0, 0)
+    app.objectives.append(Objective("reach destination"))
+    app.objectives[-1].checkOff()
 
     # create obstacles
     app.obstacles = []
@@ -87,6 +93,10 @@ def keyPressed(app, event):
             (app.rover.ty < obstacle.y - obstacle.yr) or
             (app.rover.by > obstacle.y + obstacle.yr)):
             app.rover.percentWorn += 10
+
+    # check if destination is reached
+    if((app.rover.latitude, app.rover.longitude) == app.destination):
+        app.objectives[-1].checkOff()
 
     # other controls
     if(event.key == "Space"):
@@ -173,6 +183,10 @@ def drawMissionSection(app, canvas):
     canvas.create_oval(mx1 + lo + (mx2-mx1)/2 - r, my1 - la + (mx2-mx1)/2 - r, 
                         mx1 + lo + (mx2-mx1)/2 + r, my1 - la + (mx2-mx1)/2 + r, 
                         fill = "DeepSkyBlue4", width = 0)
+    # destination
+    dx = 0.9*(mx2 - mx1)*app.destination[1]//200 + mx1 + (mx2 - mx1)//2    # based on longitude
+    dy = 0.9*(my2 - my1)*app.destination[0]//200 + my1 + (my2 - my1)//2    # based on latitude  
+    canvas.create_oval(dx + r, dy + r, dx - r, dy - r, fill = "blue", width = 0)
 
     # draw objectives
     canvas.create_text(x2//2, y2//3, text = "Objectives", fill = 'black', font = app.headerFont)

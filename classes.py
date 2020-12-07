@@ -35,7 +35,7 @@ class Objective(object):
                             font = app.paragraphFont, fill = "black", anchor = "nw")
         if(self.completed):
             # draw checkmark
-            pass
+            canvas.create_line(x, y, x + length, y + length, fill = "blue", width = 2)
 
 class PictureObjectives(Objective):
 
@@ -59,7 +59,7 @@ class PictureObjectives(Objective):
                             font = app.paragraphFont, fill = "black", anchor = "nw")
         if(self.completed):
             # draw checkmark
-            pass
+            canvas.create_line(x, y, x + length, y + length, fill = "blue", width = 2)
 
 class SampleObjectives(Objective):
 
@@ -83,7 +83,7 @@ class SampleObjectives(Objective):
                             font = app.paragraphFont, fill = "black", anchor = "nw")
         if(self.completed):
             # draw checkmark
-            pass
+            canvas.create_line(x, y, x + length, y + length, fill = "blue", width = 2)
 
 class Rover(object):
 
@@ -100,7 +100,7 @@ class Rover(object):
 
     def draw(self, app, canvas):
         x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
-        
+
         y2 *= 1.15
 
         if(self.level == 0):
