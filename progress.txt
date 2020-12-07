@@ -1,9 +1,9 @@
 latitude: 20.0
 longitude: -36.0
-charge: 50
+charge: 48
 damage: 6350
 temperature: 25
-time: 5072
+time: 5217
 pictures: 0
 samples: 0
 destinationObjective: False
