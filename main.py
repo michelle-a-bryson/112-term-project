@@ -4,8 +4,11 @@ import random
 from classes import *
 
 def appStarted(app):
+
+    app.splash = True
+
     # define fonts
-    app.titleFont = 'Arial 16 bold'
+    app.titleFont = 'Arial 36 bold'
     app.headerFont = 'Arial 12 bold'
     app.paragraphFont = 'Arial 11'
 
@@ -21,33 +24,18 @@ def appStarted(app):
     size = y2/30
     app.buttons["camera"] = (cx, cy, size)
 
-    resetAll(app)
-
-def resetAll(app):
-    # counter that increments every 10 ms
-    app.time = 0
-
-    # dawn, midday, dusk, night
-    # 0,    1,      2,    3
-    app.timeOfDay = 0
-
-    latitude = random.randint(-100, 100)
-    longitude = random.randint(-100, 100)
-    app.destination = (latitude, longitude)
-
-    # create rover
-    app.rover = Rover(0, 0)
+    sx, sy = x1 + (x2 - x1)*2/3, y1 + (y2 - y1)/2
+    app.buttons["sample"] = (sx, sy, size)
 
     # initialize objectives
     app.objectives = []
-    app.objectives.append(Objective("deploy from lander"))
+    #app.objectives.append(Objective("deploy from lander"))
     app.objectives.append(PictureObjectives())
     app.objectives.append(PictureObjectives())
     app.objectives.append(PictureObjectives())
-
-    app.objectives.append(Objective("collect samples (1 of 5)"))
+    app.objectives.append(SampleObjectives())
+    app.objectives.append(SampleObjectives())
     app.objectives.append(Objective("reach destination"))
-    app.objectives[-1].checkOff()
 
     # create obstacles
     app.obstacles = []
@@ -57,14 +45,76 @@ def resetAll(app):
     app.obstacles.append(Crater(app, 10))
     app.obstacles.append(Crater(app, 10))
 
-def timerFired(app):
-    app.time += 1
 
-    # increment rover stats
-    if(app.time%100 == 0):
-        app.rover.spendCharge()
-    if(app.time%500 == 0):
-        app.rover.wear()
+def resetAll(app):
+    # counter that increments every 10 ms
+    app.time = 0
+
+    # dawn, midday, dusk, night
+    # 0,    1,      2,    3
+    app.timeOfDay = 0
+
+    app.latitude = random.randint(-100, 100)
+    app.longitude = random.randint(-100, 100)
+
+    # create rover
+    app.rover = Rover(0, 0)
+
+    # clear progress file
+    with open("progress.txt", "wt") as f:
+        f.write("")
+
+
+def retrieveProgress(app):
+    content = readFile("progress.txt")
+
+    lines = content.split("\n")
+    data = []
+    lines.pop()         # extra empty line at the end for some reason
+    for line in lines:
+        i = line.find(':')
+        d = line[i+2:]
+        if('.' in d):
+            data.append(float(d))
+        elif(d.isalpha()):
+            data.append(bool(d))
+        else:
+            data.append(int(d))
+
+    
+    app.rover = Rover(data[0], data[1])
+    app.rover.percentCharged = data[2]
+    app.rover.percentWorn = data[3]
+    app.rover.temperature = data[4]
+
+    app.time = data[5]
+
+    # picture objectives
+    for i in range(data[6]):
+        app.obstacles[i].completed = True
+
+    # sample objectives
+    for i in range(data[7]):
+        app.obstacles[3 + i].completed = True
+
+    app.obstacles[-1].completed = data[8]
+
+    app.latitude = data[-2]
+    app.longitude = data[-1]
+
+
+def timerFired(app):
+    if(not app.splash):
+        app.time += 1
+
+        # increment rover stats
+        if(app.time%100 == 0):
+            app.rover.spendCharge()
+        if(app.time%500 == 0):
+            app.rover.wear()
+
+        # update progress file
+        saveProgress(app)
 
 
 # reset star locations if window size changes
@@ -74,12 +124,29 @@ def sizeChanged(app):
 
 def mousePressed(app, event):
     x, y = event.x, event.y
+
+    # camera button
     cx, cy, size = app.buttons["camera"]
     if(((cx - size*2) < x < (cx + size*2)) and 
         ((cy - size) < y < (cy + size))):
         takePicture(app)
 
+    # sample button
+    cx, cy, size = app.buttons["sample"]
+    if(((cx - size*2) < x < (cx + size*2)) and 
+        ((cy - size) < y < (cy + size))):
+        takeSample(app)
+
 def keyPressed(app, event):
+
+    if(app.splash):
+        if(event.key == 'r'):
+            app.splash = False
+            resetAll(app)
+        if(event.key == 'Space'):
+            app.splash = False
+            retrieveProgress(app)
+
     # rover mobility keys
     # obstacles become larger as they come closer
     if(event.key == "Up" or event.key == "w"):
@@ -104,16 +171,44 @@ def keyPressed(app, event):
             app.rover.percentWorn += 10
 
     # check if destination is reached
-    if((app.rover.latitude, app.rover.longitude) == app.destination):
+    if((app.rover.latitude, app.rover.longitude) == (app.latitude, app.longitude)):
         app.objectives[-1].checkOff()
 
     # other controls
-    if(event.key == "Space"):
-        pass
-    elif(event.key == "c"):     # camera
+    if(event.key == "c"):     # camera
         takePicture(app)
+    elif(event.key == "s"):     # sampler
+        takeSample(app)
     elif(event.key == 'r'):
         resetAll(app)
+
+def saveProgress(app):
+    # save data to progress file
+    output = ""
+    output += f"latitude: {app.rover.latitude}\n"
+    output += f"longitude: {app.rover.longitude}\n"
+    output += f"charge: {app.rover.percentCharged}\n"
+    output += f"damage: {app.rover.percentWorn}\n"
+    output += f"temperature: {app.rover.temperature}\n"
+    output += f"time: {app.time}\n"
+
+    picturesTaken = 0
+    for i in range(0, 3):
+        if(app.objectives[i].completed):
+            picturesTaken += 1
+    output += f"pictures: {picturesTaken}\n"
+
+    samplesTaken = 0
+    for i in range(3, 5):
+        if(app.objectives[i].completed):
+            samplesTaken += 1
+    output += f"samples: {samplesTaken}\n"
+
+    output += f"destinationObjective: {app.objectives[-1].completed}\n"
+    output += f"destinationLatitude: {app.latitude}"
+    output += f"destinationLatitude: {app.longitude}"
+
+    writeFile("progress.txt", output)
 
 def moveBackground(app, dir, dSize):
     dx, dy = dir
@@ -164,6 +259,22 @@ def takePicture(app):
             objective.checkOff()
             break
 
+def takeSample(app):
+    for objective in app.objectives:
+        if(isinstance(objective, SampleObjectives) and objective.completed == False):
+            objective.checkOff()
+            break
+
+def sendWarning(app, canvas):
+    # warn player if charge is low, damage is high, or temp is critical
+    pass
+
+def drawSplashScreen(app, canvas):
+    canvas.create_rectangle(0, 0, app.width, app.height, fill = "tomato4")
+    canvas.create_text(app.width/2, app.height/3, text = "Mission Control", font = app.titleFont)
+    canvas.create_text(app.width/2, app.height*3/5, text = "Press 'r' to restart", font = app.headerFont)
+    canvas.create_text(app.width/2, app.height*3.5/5, text = "Press SPACE to continue", font = app.headerFont)
+
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
 
@@ -201,8 +312,8 @@ def drawMissionSection(app, canvas):
                         mx1 + lo + (mx2-mx1)/2 + r, my1 - la + (mx2-mx1)/2 + r, 
                         fill = "DeepSkyBlue4", width = 0)
     # destination
-    dx = 0.9*(mx2 - mx1)*app.destination[1]//200 + mx1 + (mx2 - mx1)//2    # based on longitude
-    dy = 0.9*(my2 - my1)*app.destination[0]//200 + my1 + (my2 - my1)//2    # based on latitude  
+    dx = 0.9*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
+    dy = 0.9*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
     canvas.create_oval(dx + r, dy + r, dx - r, dy - r, fill = "blue", width = 0)
 
     # draw objectives
@@ -249,7 +360,9 @@ def drawRoverControlSection(app, canvas):
     canvas.create_text(cx, cy, text = "camera", fill = "white", font = app.paragraphFont)
 
     # sample button
-    #app.buttons["sample"] = x, y
+    sx, sy, size = app.buttons["sample"]
+    canvas.create_rectangle(sx + size*2, sy + size, sx - size*2, sy - size, fill = "blue", width = 0)
+    canvas.create_text(sx, sy, text = "sampler", fill = "white", font = app.paragraphFont)
 
 
 # from 112 course notes
@@ -261,17 +374,14 @@ def writeFile(path, contents):
     with open(path, "wt") as f:
         f.write(contents)
 
-# contentsToWrite = "This is a test!\nIt is only a test!"
-# writeFile("foo.txt", contentsToWrite)
-
-# contentsRead = readFile("foo.txt")
-
 def redrawAll(app, canvas):
-    #draw background
-    canvas.create_rectangle(0, 0, app.width, app.height, fill = "dim gray")
-    drawCameraFeedSection(app, canvas)
-    drawMissionSection(app, canvas)
-    drawRoverInfoSection(app, canvas)
-    drawRoverControlSection(app, canvas)
+    if(app.splash):
+        drawSplashScreen(app, canvas)
+    else:
+        canvas.create_rectangle(0, 0, app.width, app.height, fill = "dim gray")
+        drawCameraFeedSection(app, canvas)
+        drawMissionSection(app, canvas)
+        drawRoverInfoSection(app, canvas)
+        drawRoverControlSection(app, canvas)
 
 runApp(width=1100, height=600)

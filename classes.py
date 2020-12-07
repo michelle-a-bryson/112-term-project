@@ -43,9 +43,6 @@ class PictureObjectives(Objective):
         self.inProgress = False
         self.completed = False
 
-    def checkOff(self):
-        self.completed = True
-
     def draw(self, app, canvas, x, y):
         goal = f"take picture"
         length = app.width/80
@@ -58,23 +55,14 @@ class PictureObjectives(Objective):
 
 class SampleObjectives(Objective):
 
-    total = []
-    completed = []
-    goal = f"take samples ({len(completed)} of {len(total)})"
-
     def __init__(self):
         self.inProgress = False
         self.completed = False
-        SampleObjectives.total.append(self)
-
-    def checkOff(self):
-        self.completed = True
-        SampleObjectives.completed.append(self)
 
     def draw(self, app, canvas, x, y):
         length = app.width/80
         canvas.create_rectangle(x, y, x + length, y + length, width = 2)
-        canvas.create_text(x + length*2, y, text = SampleObjectives.goal, 
+        canvas.create_text(x + length*2, y, text = "take sample", 
                             font = app.paragraphFont, fill = "black", anchor = "nw")
         if(self.completed):
             # draw checkmark
