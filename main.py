@@ -14,6 +14,13 @@ def appStarted(app):
     for i in range(100):
         app.stars.append(Star(app))
 
+    # rover control button locations
+    x1, y1, x2, y2 = app.width//5, app.height*3//4, app.width*4//5, app.height
+    app.buttons = dict()
+    cx, cy = x1 + (x2 - x1)/3, y1 + (y2 - y1)/2
+    size = y2/30
+    app.buttons["camera"] = (cx, cy, size)
+
     resetAll(app)
 
 def resetAll(app):
@@ -36,10 +43,8 @@ def resetAll(app):
     app.objectives.append(Objective("deploy from lander"))
     app.objectives.append(PictureObjectives())
     app.objectives.append(PictureObjectives())
-
     app.objectives.append(PictureObjectives())
 
-    app.objectives.append(Objective("take pictures (3 of 10)"))
     app.objectives.append(Objective("collect samples (1 of 5)"))
     app.objectives.append(Objective("reach destination"))
     app.objectives[-1].checkOff()
@@ -69,6 +74,10 @@ def sizeChanged(app):
 
 def mousePressed(app, event):
     x, y = event.x, event.y
+    cx, cy, size = app.buttons["camera"]
+    if(((cx - size*2) < x < (cx + size*2)) and 
+        ((cy - size) < y < (cy + size))):
+        takePicture(app)
 
 def keyPressed(app, event):
     # rover mobility keys
@@ -101,6 +110,8 @@ def keyPressed(app, event):
     # other controls
     if(event.key == "Space"):
         pass
+    elif(event.key == "c"):     # camera
+        takePicture(app)
     elif(event.key == 'r'):
         resetAll(app)
 
@@ -146,6 +157,12 @@ def earthToMarsTime(app):
     hour = int(hours%24.6)
     sol = int(hours//24.6)
     return sol, hour, minute
+
+def takePicture(app):
+    for objective in app.objectives:
+        if(isinstance(objective, PictureObjectives) and objective.completed == False):
+            objective.checkOff()
+            break
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
@@ -225,6 +242,15 @@ def drawRoverInfoSection(app, canvas):
 def drawRoverControlSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, app.height*3//4, app.width*4//5, app.height
     canvas.create_rectangle(x1, y1, x2, y2, fill = "gray")
+
+    # camera button
+    cx, cy, size = app.buttons["camera"]
+    canvas.create_rectangle(cx + size*2, cy + size, cx - size*2, cy - size, fill = "blue", width = 0)
+    canvas.create_text(cx, cy, text = "camera", fill = "white", font = app.paragraphFont)
+
+    # sample button
+    #app.buttons["sample"] = x, y
+
 
 # from 112 course notes
 def readFile(path):

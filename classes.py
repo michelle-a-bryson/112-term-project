@@ -39,20 +39,15 @@ class Objective(object):
 
 class PictureObjectives(Objective):
 
-    total = []
-    completed = []
-
     def __init__(self):
         self.inProgress = False
         self.completed = False
-        PictureObjectives.total.append(self)
 
     def checkOff(self):
         self.completed = True
-        PictureObjectives.completed.append(self)
 
     def draw(self, app, canvas, x, y):
-        goal = f"take pictures ({len(PictureObjectives.completed)} of {len(PictureObjectives.total)})"
+        goal = f"take picture"
         length = app.width/80
         canvas.create_rectangle(x, y, x + length, y + length, width = 2)
         canvas.create_text(x + length*2, y, text = goal, 
