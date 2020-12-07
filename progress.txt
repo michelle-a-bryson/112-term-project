@@ -1,10 +1,10 @@
 latitude: 20.0
 longitude: -36.0
-charge: 91
-damage: 6200
+charge: 50
+damage: 6350
 temperature: 25
-time: 933
+time: 5072
 pictures: 0
 samples: 0
 destinationObjective: False
-destinationLatitude: 0destinationLatitude: True
+destinationLatitude: 1destinationLatitude: True
