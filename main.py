@@ -6,7 +6,7 @@ from classes import *
 def appStarted(app):
 
     app.splash = True
-
+    app.angle = 0
     # define fonts
     app.titleFont = 'Arial 36 bold'
     app.headerFont = 'Arial 12 bold'
@@ -43,8 +43,6 @@ def appStarted(app):
     app.obstacles.append(Crater(app, 10))
     app.obstacles.append(Crater(app, 10))
     app.obstacles.append(Crater(app, 10))
-    app.obstacles.append(Crater(app, 10))
-
 
 def resetAll(app):
     # counter that increments every 10 ms
@@ -53,6 +51,8 @@ def resetAll(app):
     # dawn, midday, dusk, night
     # 0,    1,      2,    3
     app.timeOfDay = 0
+
+    app.angle = 0
 
     app.latitude = random.randint(-100, 100)
     app.longitude = random.randint(-100, 100)
@@ -95,13 +95,13 @@ def retrieveProgress(app):
 
     # sample objectives
     for i in range(data[7]):
-        app.obstacles[3 + i].completed = True
+        app.obstacles[2 + i].completed = True
 
     app.obstacles[-1].completed = data[8]
+    app.latitude = data[9]
+    app.longitude = data[10]
 
-    app.latitude = data[-2]
-    app.longitude = data[-1]
-
+    app.angle = data[11]
 
 def timerFired(app):
     if(not app.splash):
@@ -115,6 +115,14 @@ def timerFired(app):
 
         # update progress file
         saveProgress(app)
+
+    # rotate Mars
+    # 360 degrees per 24.6 hours
+    # 360 degrees per 1476 minutes
+    # 360 degrees per 88560 seconds
+    # 360 degrees per 88560 scaled timerFireds
+    # rotate 0.0041 degrees every timerFired 
+    app.angle += 0.0041
 
 
 # reset star locations if window size changes
@@ -177,7 +185,7 @@ def keyPressed(app, event):
     # other controls
     if(event.key == "c"):     # camera
         takePicture(app)
-    elif(event.key == "s"):     # sampler
+    elif(event.key == "v"):     # sampler
         takeSample(app)
     elif(event.key == 'r'):
         resetAll(app)
@@ -205,8 +213,10 @@ def saveProgress(app):
     output += f"samples: {samplesTaken}\n"
 
     output += f"destinationObjective: {app.objectives[-1].completed}\n"
-    output += f"destinationLatitude: {app.latitude}"
-    output += f"destinationLatitude: {app.longitude}"
+    output += f"destinationLatitude: {app.latitude}\n"
+    output += f"destinationLongitude: {app.longitude}\n"
+
+    output += f"angle: {app.angle}\n"
 
     writeFile("progress.txt", output)
 
@@ -239,8 +249,10 @@ def moveBackground(app, dir, dSize):
 def positionOfSun(app):
     # physics with the orbits and rotations of mars and the sun
     # to determine where the sun is in the sky
+    angleOfRotation = 25.2
+    earthHoursPerRotation = 24.6
 
-    pass
+    
 
 def earthToMarsTime(app):
     timeScale = 100     # time passed in the game relative to real life
@@ -255,15 +267,20 @@ def earthToMarsTime(app):
 
 def takePicture(app):
     for objective in app.objectives:
-        if(isinstance(objective, PictureObjectives) and objective.completed == False):
+        if(isinstance(objective, PictureObjectives) and 
+        (objective.completed == False) and
+        (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
             objective.checkOff()
             break
 
 def takeSample(app):
     for objective in app.objectives:
-        if(isinstance(objective, SampleObjectives) and objective.completed == False):
+        if(isinstance(objective, SampleObjectives) and 
+            objective.completed == False and
+            (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
             objective.checkOff()
             break
+    writeFile("samples.txt", f"{earthToMarsTime(app)}, sample taken")
 
 def sendWarning(app, canvas):
     # warn player if charge is low, damage is high, or temp is critical
@@ -305,16 +322,20 @@ def drawMissionSection(app, canvas):
     mx1, my1, mx2, my2 = x2//8, y2//20, x2*7//8, y2*3//10
     canvas.create_rectangle(mx1, my1, mx2, my2, fill = "tomato4")
     # rover location
-    r = (mx2 - mx1)/20
+    r = (mx2 - mx1)/25
     la = app.rover.latitude
     lo = app.rover.longitude
     canvas.create_oval(mx1 + lo + (mx2-mx1)/2 - r, my1 - la + (mx2-mx1)/2 - r, 
                         mx1 + lo + (mx2-mx1)/2 + r, my1 - la + (mx2-mx1)/2 + r, 
                         fill = "DeepSkyBlue4", width = 0)
     # destination
-    dx = 0.9*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
-    dy = 0.9*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
+    dx = 0.85*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
+    dy = 0.85*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
     canvas.create_oval(dx + r, dy + r, dx - r, dy - r, fill = "blue", width = 0)
+
+    # checkpointa
+    for i in range(len(app.objectives)-1):
+        app.objectives[i].drawOnMap(app, canvas, i)
 
     # draw objectives
     canvas.create_text(x2//2, y2//3, text = "Objectives", fill = 'black', font = app.headerFont)

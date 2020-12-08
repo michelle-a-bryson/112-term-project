@@ -24,6 +24,8 @@ class Objective(object):
         self.goal = goal
         self.inProgress = False
         self.completed = False
+        self.checkpointLat = random.randint(-100, 100)
+        self.checkpointLong = random.randint(-100, 100)
 
     def checkOff(self):
         self.completed = True
@@ -37,11 +39,25 @@ class Objective(object):
             # draw checkmark
             canvas.create_line(x, y, x + length, y + length, fill = "blue", width = 2)
 
+    def drawOnMap(self, app, canvas, i):
+        x1, y1, x2, y2 = 0, 0, app.width//5, app.height
+        mx1, my1, mx2, my2 = x2//8, y2//20, x2*7//8, y2*3//10
+        r = (mx2 - mx1)/25
+        x = 0.85*(mx2 - mx1)*self.checkpointLat//200 + mx1 + (mx2 - mx1)//2    # based on longitude
+        y = 0.85*(my2 - my1)*self.checkpointLong//200 + my1 + (my2 - my1)//2    # based on latitude
+        canvas.create_oval(x + r, y + r, x - r, y - r, fill = "gray", width = 0)
+        canvas.create_text(x, y, text = f"{i}", fill = "black", font = app.paragraphFont)
+
+    def getCheckpoint(self):
+        return self.checkpointLat, self.checkpointLong
+
 class PictureObjectives(Objective):
 
     def __init__(self):
         self.inProgress = False
         self.completed = False
+        self.checkpointLat = random.randint(-100, 100)
+        self.checkpointLong = random.randint(-100, 100)
 
     def draw(self, app, canvas, x, y):
         goal = f"take picture"
@@ -58,6 +74,8 @@ class SampleObjectives(Objective):
     def __init__(self):
         self.inProgress = False
         self.completed = False
+        self.checkpointLat = random.randint(-100, 100)
+        self.checkpointLong = random.randint(-100, 100)
 
     def draw(self, app, canvas, x, y):
         length = app.width/80
