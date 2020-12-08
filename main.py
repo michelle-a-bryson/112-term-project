@@ -103,6 +103,14 @@ def retrieveProgress(app):
 
     app.angle = data[11]
 
+    # retrieve coordinates of mission checkpoints
+    i = 12
+    while(i < len(data)):
+        index = (i - 12)//2
+        app.objectives[index].checkpointLat = data[i]
+        app.objectives[index].checkpointLong = data[i+1]
+        i += 2
+
 def timerFired(app):
     if(not app.splash):
         app.time += 1
@@ -191,7 +199,7 @@ def keyPressed(app, event):
         resetAll(app)
 
 def saveProgress(app):
-    # save data to progress file
+    # save relevant data to progress file
     output = ""
     output += f"latitude: {app.rover.latitude}\n"
     output += f"longitude: {app.rover.longitude}\n"
@@ -217,6 +225,10 @@ def saveProgress(app):
     output += f"destinationLongitude: {app.longitude}\n"
 
     output += f"angle: {app.angle}\n"
+
+    for objective in app.objectives[:-1]:
+        output += f"checkpointLat: {objective.checkpointLat}\n"
+        output += f"checkpointLong: {objective.checkpointLong}\n"
 
     writeFile("progress.txt", output)
 
@@ -332,6 +344,7 @@ def drawMissionSection(app, canvas):
     dx = 0.85*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
     dy = 0.85*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
     canvas.create_oval(dx + r, dy + r, dx - r, dy - r, fill = "blue", width = 0)
+    canvas.create_text(dx, dy, text = "5", fill = "white", font = app.paragraphFont)
 
     # checkpointa
     for i in range(len(app.objectives)-1):
