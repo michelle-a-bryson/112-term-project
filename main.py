@@ -112,6 +112,40 @@ def retrieveProgress(app):
         app.objectives[index].checkpointLong = data[i+1]
         i += 2
 
+def saveProgress(app):
+    # save relevant data to progress file
+    output = ""
+    output += f"latitude: {app.rover.latitude}\n"
+    output += f"longitude: {app.rover.longitude}\n"
+    output += f"charge: {app.rover.percentCharged}\n"
+    output += f"damage: {app.rover.percentWorn}\n"
+    output += f"temperature: {app.rover.temperature}\n"
+    output += f"time: {app.time}\n"
+
+    picturesTaken = 0
+    for i in range(0, 3):
+        if(app.objectives[i].completed):
+            picturesTaken += 1
+    output += f"pictures: {picturesTaken}\n"
+
+    samplesTaken = 0
+    for i in range(3, 5):
+        if(app.objectives[i].completed):
+            samplesTaken += 1
+    output += f"samples: {samplesTaken}\n"
+
+    output += f"destinationObjective: {app.objectives[-1].completed}\n"
+    output += f"destinationLatitude: {app.latitude}\n"
+    output += f"destinationLongitude: {app.longitude}\n"
+
+    output += f"angle: {app.angle}\n"
+
+    for objective in app.objectives[:-1]:
+        output += f"checkpointLat: {objective.checkpointLat}\n"
+        output += f"checkpointLong: {objective.checkpointLong}\n"
+
+    writeFile("progress.txt", output)
+
 def timerFired(app):
     if(not app.splash):
         app.time += 1
@@ -169,30 +203,20 @@ def keyPressed(app, event):
     else:
         # rover mobility keys
         # obstacles become larger as they come closer
-        if(event.key == "Up" or event.key == "w"):
+        if(event.key == "Up" or event.key == "w") and app.rover.latitude < 100:
             moveBackground(app, (0, 1), 0.1)
             app.rover.latitude += 0.5
-        elif(event.key == "Down" or event.key == "s"):
+        elif(event.key == "Down" or event.key == "s") and app.rover.latitude > -100:
             moveBackground(app, (0, -1), -0.1)
             app.rover.latitude -= 0.5
-        elif(event.key == "Left" or event.key == "a"):
+        elif(event.key == "Left" or event.key == "a") and app.rover.longitude > - 100:
             moveBackground(app, (1, 0), 0)
             app.rover.longitude -= 0.5
-        elif(event.key == "Right" or event.key == "d"):
+        elif(event.key == "Right" or event.key == "d") and app.rover.longitude < 100:
             moveBackground(app, (-1, 0), 0)
             app.rover.longitude += 0.5
 
-        # check for collisions
-        for obstacle in app.obstacles:
-            if((app.rover.lx > obstacle.x - obstacle.xr) or
-                (app.rover.rx < obstacle.x + obstacle.xr) or
-                (app.rover.ty < obstacle.y - obstacle.yr) or
-                (app.rover.by > obstacle.y + obstacle.yr)):
-                app.rover.percentWorn += 10
-
-        # check if destination is reached
-        if((app.rover.latitude, app.rover.longitude) == (app.latitude, app.longitude)):
-            app.objectives[-1].checkOff()
+        checkMove(app)
 
         # other controls
         if(event.key == "c"):     # camera
@@ -202,41 +226,26 @@ def keyPressed(app, event):
         elif(event.key == 'r'):
             resetAll(app)
         elif(event.key == 'q'):
-            sendWarning(app)
+            sendWarning(app, "test")
 
-def saveProgress(app):
-    # save relevant data to progress file
-    output = ""
-    output += f"latitude: {app.rover.latitude}\n"
-    output += f"longitude: {app.rover.longitude}\n"
-    output += f"charge: {app.rover.percentCharged}\n"
-    output += f"damage: {app.rover.percentWorn}\n"
-    output += f"temperature: {app.rover.temperature}\n"
-    output += f"time: {app.time}\n"
+def checkMove(app):
+    # check for collisions
+    for obstacle in app.obstacles:
+        if((app.rover.lx > obstacle.x - obstacle.xr) or
+            (app.rover.rx < obstacle.x + obstacle.xr) or
+            (app.rover.ty < obstacle.y - obstacle.yr) or
+            (app.rover.by > obstacle.y + obstacle.yr)):
+            app.rover.percentWorn += 10
 
-    picturesTaken = 0
-    for i in range(0, 3):
-        if(app.objectives[i].completed):
-            picturesTaken += 1
-    output += f"pictures: {picturesTaken}\n"
+    # check if rover is going out of mission bounds
+    if((not -100 < app.rover.latitude < 100) or
+        (not -100 < app.rover.longitude < 100)):
+        sendWarning(app, "Out of mission bounds")
 
-    samplesTaken = 0
-    for i in range(3, 5):
-        if(app.objectives[i].completed):
-            samplesTaken += 1
-    output += f"samples: {samplesTaken}\n"
+    # check if destination is reached
+    if((app.rover.latitude, app.rover.longitude) == (app.latitude, app.longitude)):
+        app.objectives[-1].checkOff()
 
-    output += f"destinationObjective: {app.objectives[-1].completed}\n"
-    output += f"destinationLatitude: {app.latitude}\n"
-    output += f"destinationLongitude: {app.longitude}\n"
-
-    output += f"angle: {app.angle}\n"
-
-    for objective in app.objectives[:-1]:
-        output += f"checkpointLat: {objective.checkpointLat}\n"
-        output += f"checkpointLong: {objective.checkpointLong}\n"
-
-    writeFile("progress.txt", output)
 
 def moveBackground(app, dir, dSize):
     dx, dy = dir
@@ -300,9 +309,9 @@ def takeSample(app):
             break
     writeFile("samples.txt", f"{earthToMarsTime(app)}, sample taken")
 
-def sendWarning(app):
+def sendWarning(app, message):
     # warn player if charge is low, damage is high, or temp is critical
-    app.popupMessage = "ttest"
+    app.popupMessage = message
     app.popupStart = app.time
 
 def drawPopUp(app, canvas):
@@ -346,14 +355,14 @@ def drawMissionSection(app, canvas):
     canvas.create_rectangle(mx1, my1, mx2, my2, fill = "tomato4")
     # rover location
     r = (mx2 - mx1)/25
-    la = app.rover.latitude
-    lo = app.rover.longitude
+    la = 0.7*app.rover.latitude
+    lo = 0.8*app.rover.longitude
     canvas.create_oval(mx1 + lo + (mx2-mx1)/2 - r, my1 - la + (mx2-mx1)/2 - r, 
                         mx1 + lo + (mx2-mx1)/2 + r, my1 - la + (mx2-mx1)/2 + r, 
                         fill = "DeepSkyBlue4", width = 0)
     # destination
-    dx = 0.85*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
-    dy = 0.85*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
+    dx = 0.9*(mx2 - mx1)*app.latitude//200 + mx1 + (mx2 - mx1)//2    # based on longitude
+    dy = 0.9*(my2 - my1)*app.longitude//200 + my1 + (my2 - my1)//2    # based on latitude  
     canvas.create_oval(dx + r, dy + r, dx - r, dy - r, fill = "blue", width = 0)
     canvas.create_text(dx, dy, text = "5", fill = "white", font = app.paragraphFont)
 
