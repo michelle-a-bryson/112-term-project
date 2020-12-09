@@ -5,10 +5,11 @@ from classes import *
 
 def appStarted(app):
 
+    app.rover = Rover(0, 0)
     app.splash = True
     app.angle = 0
     app.popupMessage = None
-    app.numObstacles = 0
+    app.numObjectives = 0
 
     app.sampling = False
     app.sampleAttached = False
@@ -40,10 +41,12 @@ def appStarted(app):
     app.objectives = []
     #app.objectives.append(Objective("deploy from lander"))
     for i in range(3):
-        app.objectives.append(PictureObjectives())
+        app.objectives.append(PictureObjectives(app.numObjectives))
+        app.numObjectives += 1
     for i in range(2):
-        app.objectives.append(SampleObjectives())
-    app.objectives.append(Objective("reach destination"))
+        app.objectives.append(SampleObjectives(app.numObjectives))
+        app.numObjectives += 1
+    app.objectives.append(Objective("reach destination", app.numObjectives))
 
     # create obstacles
     app.obstacles = []
@@ -324,6 +327,8 @@ def takePicture(app):
 
 def takeSample(app):
     for objective in app.objectives:
+        print(objective.getCheckpoint())
+        print((app.rover.latitude, app.rover.longitude))
         if(isinstance(objective, SampleObjectives) and 
             objective.completed == False and
             (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
@@ -344,9 +349,11 @@ def drawPopUp(app, canvas):
 
 def drawSplashScreen(app, canvas):
     canvas.create_rectangle(0, 0, app.width, app.height, fill = "tomato4")
-    canvas.create_text(app.width/2, app.height/3, text = "Mission Control", font = app.titleFont)
-    canvas.create_text(app.width/2, app.height*3/5, text = "Press 'r' to start a new mission", font = app.headerFont)
-    canvas.create_text(app.width/2, app.height*3.5/5, text = "Press SPACE to continue the current mission", font = app.headerFont)
+    canvas.create_text(app.width/1.99, app.height/5.1, text = "Mission Control", font = app.titleFont)  # text shadow
+    canvas.create_text(app.width/2, app.height/5, text = "Mission Control", fill = "SteelBlue4", font = app.titleFont)
+    canvas.create_text(app.width/2, app.height*1.5/5, text = "Press 'r' to start a new mission", font = app.headerFont)
+    canvas.create_text(app.width/2, app.height*6/7, text = "Press SPACE to continue the current mission", font = app.headerFont)
+    app.rover.draw(app, canvas)
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4

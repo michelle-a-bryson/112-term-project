@@ -2,3 +2,7 @@
 (0, 0, 44), sample taken
 (0, 0, 24), sample taken
 (0, 0, 29), sample taken
+(0, 0, 50), sample taken
+(0, 0, 27), sample taken
+(0, 0, 42), sample taken
+(0, 0, 5), sample taken

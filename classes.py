@@ -20,12 +20,13 @@ class Star(object):
 # keeps track of mission objectives
 class Objective(object):
 
-    def __init__(self, goal):
+    def __init__(self, goal, number):
         self.goal = goal
         self.inProgress = False
         self.completed = False
         self.checkpointLat = random.randint(-100, 100)
         self.checkpointLong = random.randint(-100, 100)
+        self.number = number
 
     def checkOff(self):
         self.completed = True
@@ -53,11 +54,12 @@ class Objective(object):
 
 class PictureObjectives(Objective):
 
-    def __init__(self):
+    def __init__(self, number):
         self.inProgress = False
         self.completed = False
         self.checkpointLat = random.randint(-100, 100)
         self.checkpointLong = random.randint(-100, 100)
+        self.number = number
 
     def draw(self, app, canvas, x, y):
         goal = f"take picture"
@@ -71,11 +73,12 @@ class PictureObjectives(Objective):
 
 class SampleObjectives(Objective):
 
-    def __init__(self):
+    def __init__(self, number):
         self.inProgress = False
         self.completed = False
         self.checkpointLat = random.randint(-100, 100)
         self.checkpointLong = random.randint(-100, 100)
+        self.number = number
 
     def draw(self, app, canvas, x, y):
         length = app.width/80
