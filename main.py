@@ -17,6 +17,12 @@ def appStarted(app):
     app.samplingX = app.width*7/8
     app.samplingY = 1
 
+    # calculate rate of Mars rotation
+    hoursPerRotation = 24.6
+    minutesPerRotation = hoursPerRotation*60
+    secondsPerRotation = minutesPerRotation*60
+    timerFiredsPerRotation = secondsPerRotation
+    app.degreesPerTimerFired = 360/timerFiredsPerRotation
 
     # define fonts
     app.titleFont = 'Arial 36 bold'
@@ -164,12 +170,7 @@ def timerFired(app):
             app.daytime = False    
 
         # rotate Mars
-        # 360 degrees per 24.6 hours
-        # 360 degrees per 1476 minutes
-        # 360 degrees per 88560 seconds
-        # 360 degrees per 88560 scaled timerFireds
-        # rotate 0.0041 degrees every timerFired 
-        app.angle += 0.0041
+        app.angle += app.degreesPerTimerFired
 
         # completely turned away from the sun at 0/360 and completely facing the sun at 180
         app.angle %= 360
@@ -258,6 +259,8 @@ def keyPressed(app, event):
             app.sampling = True
         elif(event.key == 'r'):
             resetAll(app)
+        elif(event.key == 'o'):
+            optimalPath(app)
 
         # increment rover stats
         app.rover.spendCharge()
@@ -307,14 +310,6 @@ def moveBackground(app, dir, dSize):
             app.obstacles.append(Crater(app, 10))
             app.obstacles[-1].y = y2//3 + app.obstacles[-1].size
             app.obstacles[-1].size /= 3
-
-def positionOfSun(app):
-    # physics with the orbits and rotations of mars and the sun
-    # to determine where the sun is in the sky
-    angleOfRotation = 25.2
-    earthHoursPerRotation = 24.6
-
-    
 
 def earthToMarsTime(app):
     timeScale = 100     # time passed in the game relative to real life
@@ -510,6 +505,35 @@ def drawRoverControlSection(app, canvas):
     canvas.create_rectangle(sx + size*2, sy + size, sx - size*2, sy - size, fill = "blue", width = 0)
     canvas.create_text(sx, sy, text = "sampler", fill = "white", font = app.paragraphFont)
 
+
+# use recursive backtracking to determine
+# which is the most efficient order to complete checkpoints
+def optimalPath(app):
+    coordinates = []
+
+    for objective in app.objectives:
+        coordinates += objective.getCheckpoint()
+
+    alreadyChecked = dict()
+    
+def pathFromPoint(coordinates, checked, distance):
+    i = len(checked)
+    if(i == len(coordinates) - 4):
+        checked[i] = (coordinates[-2], coordinates[-1])
+        #distance += distance(coordinates[i], coordinates[i+1], coordinates[i+2], coordinates[i+3])
+        return checked
+        
+    else:
+        for c in range(i, len(coordinates), 2):
+            if((coordinates[c], coordinates[c+1]) not in checked):
+                checked[i] = (coordinates[c], coordinates[c+1])
+                #distance += distance(coordinates[c], coordinates[c+1], coordinates[c+2], coordinates[c+3])
+                return pathFromPoint(coordinates, checked, distance)
+
+
+# distance formula
+def distance(x1, y1, x2, y2):
+    return ((x2 - x1)**2 + (y2 - y1)**2)**0.5
 
 # from 112 course notes: https://www.cs.cmu.edu/~112/notes/notes-strings.html#basicFileIO
 def readFile(path):
