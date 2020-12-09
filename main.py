@@ -381,14 +381,26 @@ def drawCameraFeedSection(app, canvas):
         gradient = int((app.angle/360)*150)
         color = rgbString(gradient, gradient, 100)
         canvas.create_rectangle(x1, y1, x2, y2//3, fill = color)
-        # draw sun
+        # draw sun's position based on angle of Mars
+        sunR = app.height//20
+        sunX = ((app.angle-90)/180)*(x2 - x1)
+        canvas.create_oval(sunX + sunR, y2//5 + sunR, sunX - sunR, y2//5 - sunR, 
+                            fill = "light goldenrod", width = 0)
     else:
         # draw sky
         canvas.create_rectangle(x1, y1, x2, y2//3, fill = "black")
         # draw stars
         for star in app.stars:
             star.draw(canvas)
-        # draw demos and phobos
+        # draw demos and phobos based on angle of Mars
+        moonsR = app.height//20
+        moonsX = ((abs(app.angle-90))/180)*(x2 - x1)
+        # deimos
+        canvas.create_oval(moonsX + moonsR, y2//5 + moonsR, moonsX - moonsR, y2//5 - moonsR, 
+                            fill = "AntiqueWhite2", width = 0)
+        # phobos
+        canvas.create_oval(moonsX + moonsR + 3*moonsR, y2//5 + moonsR, moonsX - moonsR + 3*moonsR, y2//5 - moonsR, 
+                            fill = "seashell4", width = 0)
 
 def drawMissionSection(app, canvas):
     x1, y1, x2, y2 = 0, 0, app.width//5, app.height
