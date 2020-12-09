@@ -7,6 +7,7 @@ def appStarted(app):
 
     app.splash = True
     app.angle = 0
+    app.popupMessage = None
     # define fonts
     app.titleFont = 'Arial 36 bold'
     app.headerFont = 'Arial 12 bold'
@@ -121,17 +122,20 @@ def timerFired(app):
         if(app.time%500 == 0):
             app.rover.wear()
 
+        # rotate Mars
+        # 360 degrees per 24.6 hours
+        # 360 degrees per 1476 minutes
+        # 360 degrees per 88560 seconds
+        # 360 degrees per 88560 scaled timerFireds
+        # rotate 0.0041 degrees every timerFired 
+        app.angle += 0.0041
+
         # update progress file
         saveProgress(app)
 
-    # rotate Mars
-    # 360 degrees per 24.6 hours
-    # 360 degrees per 1476 minutes
-    # 360 degrees per 88560 seconds
-    # 360 degrees per 88560 scaled timerFireds
-    # rotate 0.0041 degrees every timerFired 
-    app.angle += 0.0041
-
+        # check if there is a popup that needs to go away
+        if(app.popupMessage != None and app.time > app.popupStart + 15):
+            app.popupMessage = None
 
 # reset star locations if window size changes
 def sizeChanged(app):
@@ -162,41 +166,43 @@ def keyPressed(app, event):
         if(event.key == 'Space'):
             app.splash = False
             retrieveProgress(app)
+    else:
+        # rover mobility keys
+        # obstacles become larger as they come closer
+        if(event.key == "Up" or event.key == "w"):
+            moveBackground(app, (0, 1), 0.1)
+            app.rover.latitude += 0.5
+        elif(event.key == "Down" or event.key == "s"):
+            moveBackground(app, (0, -1), -0.1)
+            app.rover.latitude -= 0.5
+        elif(event.key == "Left" or event.key == "a"):
+            moveBackground(app, (1, 0), 0)
+            app.rover.longitude -= 0.5
+        elif(event.key == "Right" or event.key == "d"):
+            moveBackground(app, (-1, 0), 0)
+            app.rover.longitude += 0.5
 
-    # rover mobility keys
-    # obstacles become larger as they come closer
-    if(event.key == "Up" or event.key == "w"):
-        moveBackground(app, (0, 1), 0.1)
-        app.rover.latitude += 0.5
-    elif(event.key == "Down" or event.key == "s"):
-        moveBackground(app, (0, -1), -0.1)
-        app.rover.latitude -= 0.5
-    elif(event.key == "Left" or event.key == "a"):
-        moveBackground(app, (1, 0), 0)
-        app.rover.longitude -= 0.5
-    elif(event.key == "Right" or event.key == "d"):
-        moveBackground(app, (-1, 0), 0)
-        app.rover.longitude += 0.5
+        # check for collisions
+        for obstacle in app.obstacles:
+            if((app.rover.lx > obstacle.x - obstacle.xr) or
+                (app.rover.rx < obstacle.x + obstacle.xr) or
+                (app.rover.ty < obstacle.y - obstacle.yr) or
+                (app.rover.by > obstacle.y + obstacle.yr)):
+                app.rover.percentWorn += 10
 
-    # check for collisions
-    for obstacle in app.obstacles:
-        if((app.rover.lx > obstacle.x - obstacle.xr) or
-            (app.rover.rx < obstacle.x + obstacle.xr) or
-            (app.rover.ty < obstacle.y - obstacle.yr) or
-            (app.rover.by > obstacle.y + obstacle.yr)):
-            app.rover.percentWorn += 10
+        # check if destination is reached
+        if((app.rover.latitude, app.rover.longitude) == (app.latitude, app.longitude)):
+            app.objectives[-1].checkOff()
 
-    # check if destination is reached
-    if((app.rover.latitude, app.rover.longitude) == (app.latitude, app.longitude)):
-        app.objectives[-1].checkOff()
-
-    # other controls
-    if(event.key == "c"):     # camera
-        takePicture(app)
-    elif(event.key == "v"):     # sampler
-        takeSample(app)
-    elif(event.key == 'r'):
-        resetAll(app)
+        # other controls
+        if(event.key == "c"):     # camera
+            takePicture(app)
+        elif(event.key == "v"):     # sampler
+            takeSample(app)
+        elif(event.key == 'r'):
+            resetAll(app)
+        elif(event.key == 'q'):
+            sendWarning(app)
 
 def saveProgress(app):
     # save relevant data to progress file
@@ -294,9 +300,14 @@ def takeSample(app):
             break
     writeFile("samples.txt", f"{earthToMarsTime(app)}, sample taken")
 
-def sendWarning(app, canvas):
+def sendWarning(app):
     # warn player if charge is low, damage is high, or temp is critical
-    pass
+    app.popupMessage = "ttest"
+    app.popupStart = app.time
+
+def drawPopUp(app, canvas):
+    canvas.create_rectangle(app.width*1/3, app.height*1/10, app.width*2/3, app.height*2/10, fill = "light gray", width = 0)
+    canvas.create_text(app.width/2, app.height*3/20, text = app.popupMessage, font = app.headerFont)
 
 def drawSplashScreen(app, canvas):
     canvas.create_rectangle(0, 0, app.width, app.height, fill = "tomato4")
@@ -399,7 +410,7 @@ def drawRoverControlSection(app, canvas):
     canvas.create_text(sx, sy, text = "sampler", fill = "white", font = app.paragraphFont)
 
 
-# from 112 course notes
+# from 112 course notes: https://www.cs.cmu.edu/~112/notes/notes-strings.html#basicFileIO
 def readFile(path):
     with open(path, "rt") as f:
         return f.read()
@@ -417,5 +428,7 @@ def redrawAll(app, canvas):
         drawMissionSection(app, canvas)
         drawRoverInfoSection(app, canvas)
         drawRoverControlSection(app, canvas)
+        if(app.popupMessage != None):
+            drawPopUp(app, canvas)
 
 runApp(width=1100, height=600)

@@ -146,6 +146,8 @@ class Rover(object):
                                     tLeftX + mid + x2/20, fRightY - y2/10 - y2/20,
                                     fill = "cornsilk4", width = 0)
 
+            
+
             # draw solar panels
             canvas.create_rectangle(tLeftX - marginX, tLeftY - marginY, tRightX + marginX, tRightY, 
                                     fill = "DeepSkyBlue4", width = 0)
