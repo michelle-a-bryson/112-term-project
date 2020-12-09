@@ -99,7 +99,7 @@ class Rover(object):
         self.percentCharged = 100
         self.temperature = 25       # degrees Celsius
         self.percentWorn = 0
-        self.chargingRate = 5
+        self.chargingRate = 0.05
         self.lx = self.rx = self.ty = self.by = 0
 
     def draw(self, app, canvas):
@@ -185,17 +185,18 @@ class Rover(object):
 
     def spendCharge(self):
         if(self.percentCharged > 0):
-            self.percentCharged -= 1
+            self.percentCharged -= 0.05
 
     def wear(self):
         if(self.percentWorn < 100):
-            self.percentWorn += 1
+            self.percentWorn += 0.01
 
     def damage(self, obstacle):
         pass
 
     def charge(self):
-        self.percentCharged += self.chargingRate
+        if(self.percentCharged < 100 - self.chargingRate):
+            self.percentCharged += self.chargingRate
 
     def upgradeSpeed(self):
         self.speed += 1

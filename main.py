@@ -10,6 +10,7 @@ def appStarted(app):
     app.angle = 0
     app.popupMessage = None
     app.numObjectives = 0
+    app.daytime = False
 
     app.sampling = False
     app.sampleAttached = False
@@ -58,10 +59,6 @@ def appStarted(app):
 def resetAll(app):
     # counter that increments every 10 ms
     app.time = 0
-
-    # dawn, midday, dusk, night
-    # 0,    1,      2,    3
-    app.timeOfDay = 0
 
     app.angle = 0
 
@@ -160,11 +157,11 @@ def timerFired(app):
     if(not app.splash):
         app.time += 1
 
-        # increment rover stats
-        if(app.time%100 == 0):
-            app.rover.spendCharge()
-        if(app.time%500 == 0):
-            app.rover.wear()
+        if(90 < app.angle < 270):
+            app.daytime = True
+            app.rover.charge()
+        else:
+            app.daytime = False    
 
         # rotate Mars
         # 360 degrees per 24.6 hours
@@ -173,6 +170,13 @@ def timerFired(app):
         # 360 degrees per 88560 scaled timerFireds
         # rotate 0.0041 degrees every timerFired 
         app.angle += 0.0041
+
+        # completely turned away from the sun at 0/360 and completely facing the sun at 180
+        app.angle %= 360
+        if(app.angle < 180):
+            app.rover.chargingRate = (app.angle/180)*0.05
+        else:
+            app.rover.chargingRate = ((180-app.angle)/180)*0.05
 
         # update progress file
         saveProgress(app)
@@ -201,12 +205,13 @@ def mousePressed(app, event):
         ((cy - size) < y < (cy + size))):
         takeSample(app)
 
-    # sampling game
+    # track mouse click for sampling game
     if(app.sampling):
         app.samplingX = x
 
 def keyPressed(app, event):
 
+    # splash page controls
     if(app.splash):
         if(event.key == 'r'):
             app.splash = False
@@ -214,6 +219,8 @@ def keyPressed(app, event):
         if(event.key == 'Space'):
             app.splash = False
             retrieveProgress(app)
+
+    # sampling mini game controls
     elif(app.sampling):
         if(event.key == 'Down'):
             app.samplingY += 10
@@ -225,6 +232,7 @@ def keyPressed(app, event):
                 app.sampling = False
         elif(event.key == 'Space'):
             app.sampleAttached = True
+
     else:
         # rover mobility keys
         # obstacles become larger as they come closer
@@ -250,8 +258,10 @@ def keyPressed(app, event):
             app.sampling = True
         elif(event.key == 'r'):
             resetAll(app)
-        elif(event.key == 'q'):
-            sendWarning(app, "test")
+
+        # increment rover stats
+        app.rover.spendCharge()
+        app.rover.wear()
 
 def checkMove(app):
     # check for collisions
@@ -260,7 +270,7 @@ def checkMove(app):
             (app.rover.rx < obstacle.x + obstacle.xr) or
             (app.rover.ty < obstacle.y - obstacle.yr) or
             (app.rover.by > obstacle.y + obstacle.yr)):
-            app.rover.percentWorn += 10
+            app.rover.wear()
 
     # check if rover is going out of mission bounds
     if((not -100 < app.rover.latitude < 100) or
@@ -327,8 +337,6 @@ def takePicture(app):
 
 def takeSample(app):
     for objective in app.objectives:
-        print(objective.getCheckpoint())
-        print((app.rover.latitude, app.rover.longitude))
         if(isinstance(objective, SampleObjectives) and 
             objective.completed == False and
             (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
@@ -368,14 +376,19 @@ def drawCameraFeedSection(app, canvas):
     # draw rover
     app.rover.draw(app, canvas)
 
-    # draw sky
-    canvas.create_rectangle(x1, y1, x2, y2//3, fill = "black")
-
-    # draw stars
-    for star in app.stars:
-        star.draw(canvas)
-
-    # draw demos and phobos
+    if(app.daytime):
+        # draw sky
+        gradient = int((app.angle/360)*150)
+        color = rgbString(gradient, gradient, 100)
+        canvas.create_rectangle(x1, y1, x2, y2//3, fill = color)
+        # draw sun
+    else:
+        # draw sky
+        canvas.create_rectangle(x1, y1, x2, y2//3, fill = "black")
+        # draw stars
+        for star in app.stars:
+            star.draw(canvas)
+        # draw demos and phobos
 
 def drawMissionSection(app, canvas):
     x1, y1, x2, y2 = 0, 0, app.width//5, app.height
@@ -409,6 +422,9 @@ def drawMissionSection(app, canvas):
         y = y2//3 + 30*(i+1)
         goal.draw(app, canvas, x, y)
 
+    # write mission location Mawrth Vallis
+    canvas.create_text(x2/2, y2*8/9, text = "location: Mawrth Vallis", font = app.paragraphFont)
+
 def drawRoverInfoSection(app, canvas):
     x1, y1, x2, y2 = app.width*4//5, 0, app.width, app.height
     canvas.create_rectangle(x1, y1, x2, y2, fill = "slate gray")
@@ -420,13 +436,13 @@ def drawRoverInfoSection(app, canvas):
     margin = 30
     canvas.create_text(x1 + (x2-x1)//2, y2//3, text = "Rover Stats", fill = 'black', font = app.headerFont)
     canvas.create_text(x1 + (x2-x1)//8, y2//3 + margin, 
-                        text = f"Battery Charge: {app.rover.percentCharged}%", fill = 'black', 
+                        text = f"Battery Charge: {int(app.rover.percentCharged)}%", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
     canvas.create_text(x1 + (x2-x1)//8, y2//3 + 2*margin, 
                         text = f"Temperature: {app.rover.temperature} C", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
     canvas.create_text(x1 + (x2-x1)//8, y2//3 + 3*margin, 
-                        text = f"Wear and Tear: {app.rover.percentWorn}%", fill = 'black', 
+                        text = f"Wear and Tear: {int(app.rover.percentWorn)}%", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
 
     if(app.sampling):
@@ -491,6 +507,10 @@ def readFile(path):
 def writeFile(path, contents):
     with open(path, "wt") as f:
         f.write(contents)
+
+# from collab 4
+def rgbString(red, green, blue):
+    return f'#{red:02x}{green:02x}{blue:02x}'
 
 def redrawAll(app, canvas):
     if(app.splash):
