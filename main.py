@@ -273,7 +273,8 @@ def checkMove(app):
             (app.rover.rx < obstacle.x + obstacle.xr) or
             (app.rover.ty < obstacle.y - obstacle.yr) or
             (app.rover.by > obstacle.y + obstacle.yr)):
-            app.rover.wear()
+            #app.rover.wear()
+            pass
 
     # check if rover is going out of mission bounds
     if((not -100 < app.rover.latitude < 100) or
@@ -303,7 +304,7 @@ def moveBackground(app, dir, dSize):
 
         if((obstacle.x < x1 - obstacle.size*1.5) or
             (obstacle.x > x2 + obstacle.size*1.5) or
-            (obstacle.y < y1 - obstacle.size) or
+            (obstacle.y < y1 - obstacle.size) or 
             (obstacle.y > y2 + obstacle.size)):
             app.obstacles.pop()
             # add new obstacle
@@ -325,16 +326,16 @@ def earthToMarsTime(app):
 def takePicture(app):
     for objective in app.objectives:
         if(isinstance(objective, PictureObjectives) and 
-        (objective.completed == False) and
-        (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
+        (objective.completed == False)):
+        # and (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()
             objective.checkOff()
             break
 
 def takeSample(app):
     for objective in app.objectives:
         if(isinstance(objective, SampleObjectives) and 
-            objective.completed == False and
-            (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
+            objective.completed == False):
+            # and (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()
             objective.checkOff()
             break
     previous = readFile("samples.txt")
@@ -430,7 +431,7 @@ def drawMissionSection(app, canvas):
         goal.draw(app, canvas, x, y)
 
     # write mission location Mawrth Vallis
-    canvas.create_text(x2/2, y2*8/9, text = "location: Mawrth Vallis", font = app.paragraphFont)
+    canvas.create_text(x2/2, y2*8/9, text = "location: Mawrth Vallis", font = app.headerFont)
 
 def drawRoverInfoSection(app, canvas):
     x1, y1, x2, y2 = app.width*4//5, 0, app.width, app.height
@@ -459,7 +460,7 @@ def drawRoverInfoSection(app, canvas):
     s, h, m = earthToMarsTime(app)
     canvas.create_text(x1 + (x2-x1)//8, y2*7/8, 
                         text = f"Sol {s}, {h}:{m}", fill = 'black', 
-                        font = app.paragraphFont, anchor = "nw")
+                        font = app.headerFont, anchor = "nw")
 
 def drawSampleGame(app, canvas):
 
