@@ -8,6 +8,14 @@ def appStarted(app):
     app.splash = True
     app.angle = 0
     app.popupMessage = None
+    app.numObstacles = 0
+
+    app.sampling = False
+    app.sampleAttached = False
+    app.samplingX = app.width*7/8
+    app.samplingY = 1
+
+
     # define fonts
     app.titleFont = 'Arial 36 bold'
     app.headerFont = 'Arial 12 bold'
@@ -31,11 +39,10 @@ def appStarted(app):
     # initialize objectives
     app.objectives = []
     #app.objectives.append(Objective("deploy from lander"))
-    app.objectives.append(PictureObjectives())
-    app.objectives.append(PictureObjectives())
-    app.objectives.append(PictureObjectives())
-    app.objectives.append(SampleObjectives())
-    app.objectives.append(SampleObjectives())
+    for i in range(3):
+        app.objectives.append(PictureObjectives())
+    for i in range(2):
+        app.objectives.append(SampleObjectives())
     app.objectives.append(Objective("reach destination"))
 
     # create obstacles
@@ -191,6 +198,10 @@ def mousePressed(app, event):
         ((cy - size) < y < (cy + size))):
         takeSample(app)
 
+    # sampling game
+    if(app.sampling):
+        app.samplingX = x
+
 def keyPressed(app, event):
 
     if(app.splash):
@@ -200,6 +211,17 @@ def keyPressed(app, event):
         if(event.key == 'Space'):
             app.splash = False
             retrieveProgress(app)
+    elif(app.sampling):
+        if(event.key == 'Down'):
+            app.samplingY += 10
+        elif(event.key == 'Up'):
+            app.samplingY -= 10
+            if(app.samplingY < 0):
+                takeSample(app)
+                app.sampleAttached = False
+                app.sampling = False
+        elif(event.key == 'Space'):
+            app.sampleAttached = True
     else:
         # rover mobility keys
         # obstacles become larger as they come closer
@@ -222,7 +244,7 @@ def keyPressed(app, event):
         if(event.key == "c"):     # camera
             takePicture(app)
         elif(event.key == "v"):     # sampler
-            takeSample(app)
+            app.sampling = True
         elif(event.key == 'r'):
             resetAll(app)
         elif(event.key == 'q'):
@@ -307,7 +329,9 @@ def takeSample(app):
             (app.rover.latitude, app.rover.longitude) == objective.getCheckpoint()):
             objective.checkOff()
             break
-    writeFile("samples.txt", f"{earthToMarsTime(app)}, sample taken")
+    previous = readFile("samples.txt")
+    current = previous + f"{earthToMarsTime(app)}, sample taken\n"
+    writeFile("samples.txt", current)
 
 def sendWarning(app, message):
     # warn player if charge is low, damage is high, or temp is critical
@@ -321,8 +345,8 @@ def drawPopUp(app, canvas):
 def drawSplashScreen(app, canvas):
     canvas.create_rectangle(0, 0, app.width, app.height, fill = "tomato4")
     canvas.create_text(app.width/2, app.height/3, text = "Mission Control", font = app.titleFont)
-    canvas.create_text(app.width/2, app.height*3/5, text = "Press 'r' to restart", font = app.headerFont)
-    canvas.create_text(app.width/2, app.height*3.5/5, text = "Press SPACE to continue", font = app.headerFont)
+    canvas.create_text(app.width/2, app.height*3/5, text = "Press 'r' to start a new mission", font = app.headerFont)
+    canvas.create_text(app.width/2, app.height*3.5/5, text = "Press SPACE to continue the current mission", font = app.headerFont)
 
 def drawCameraFeedSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, 0, app.width*4//5, app.height*3//4
@@ -398,11 +422,44 @@ def drawRoverInfoSection(app, canvas):
                         text = f"Wear and Tear: {app.rover.percentWorn}%", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
 
+    if(app.sampling):
+        drawSampleGame(app, canvas)
+
     # draw time
     s, h, m = earthToMarsTime(app)
     canvas.create_text(x1 + (x2-x1)//8, y2*7/8, 
                         text = f"Sol {s}, {h}:{m}", fill = 'black', 
                         font = app.paragraphFont, anchor = "nw")
+
+def drawSampleGame(app, canvas):
+
+    x1, y1, x2, y2 = app.width*4//5, 0, app.width, app.height
+
+    canvas.create_rectangle(x1 + (x2-x1)//8, y2//20, x1 + (x2-x1)*7//8, y2*3//10, fill = "tomato4")
+    canvas.create_rectangle(x1 + (x2-x1)//8, y2//20, x1 + (x2-x1)*7//8, y2*3//15, fill = "black")
+
+    x = app.samplingX
+
+    if(x < x1 + (x2-x1)//8):
+        x = x1 + (x2-x1)//8
+    elif(x > x1 + (x2-x1)*7//8):
+        x = x1 + (x2-x1)*7//8
+
+    # draw sampling arm
+    sampleSize = app.width/40
+    bottomY = y2/10 + app.samplingY
+    canvas.create_rectangle(x - sampleSize, y2/15, x, bottomY, 
+                            fill = "NavajoWhite4", width = 0)   # vertical piece
+    size = x - (x1 + (x2-x1)//8)
+    canvas.create_rectangle(x - size, y2/15, x, y2/10, 
+                            fill = "NavajoWhite3", width = 0)   # horizontal piece
+
+    # draw soil sample
+    sx = x1 + (x2-x1)//2
+    if(app.sampleAttached):
+        canvas.create_rectangle(sx - sampleSize, bottomY - sampleSize, sx, bottomY, fill = "tomato3", width = 0)
+    else:
+        canvas.create_rectangle(sx - sampleSize, y2*3//15, sx, y2*3//15 + sampleSize, fill = "tomato3", width = 0)
 
 def drawRoverControlSection(app, canvas):
     x1, y1, x2, y2 = app.width//5, app.height*3//4, app.width*4//5, app.height

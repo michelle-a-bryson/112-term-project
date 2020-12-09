@@ -1,1 +1,4 @@
-(0, 0, 31), sample taken
+(0, 0, 32), sample taken
+(0, 0, 44), sample taken
+(0, 0, 24), sample taken
+(0, 0, 29), sample taken
